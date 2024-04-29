@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 
@@ -30,12 +31,22 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler(value = {RuntimeException.class, Exception.class})
-    public ResponseEntity<ErrorResponse> serverError(ResourceNotFoundException e) {
+    public ResponseEntity<ErrorResponse> serverError(Exception e) {
         ErrorMessage error = new ErrorMessage(e.getMessage());
         String requestUrl = webRequest.getDescription(false);
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.NOT_FOUND.value(), e.getMessage(), requestUrl, List.of(error));
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> serverError(MethodArgumentTypeMismatchException e) {
+        ErrorMessage error = new ErrorMessage(
+                String.format("Parâmetro '%s' com tipo inválido", e.getName()));
+        String requestUrl = webRequest.getDescription(false);
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), e.getMessage(), requestUrl, List.of(error));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
     @ExceptionHandler(value = {ResourceNotFoundException.class})
