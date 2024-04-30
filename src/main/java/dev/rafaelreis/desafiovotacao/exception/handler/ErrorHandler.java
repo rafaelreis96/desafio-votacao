@@ -1,5 +1,6 @@
 package dev.rafaelreis.desafiovotacao.exception.handler;
 
+import dev.rafaelreis.desafiovotacao.exception.BusinessException;
 import dev.rafaelreis.desafiovotacao.exception.ResourceNotFoundException;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -30,12 +31,12 @@ public class ErrorHandler {
         return new ErrorMessage(this.messageSource.getMessage(field, LocaleContextHolder.getLocale()));
     }
 
-    @ExceptionHandler(value = {RuntimeException.class, Exception.class})
+    @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> serverError(Exception e) {
         ErrorMessage error = new ErrorMessage(e.getMessage());
         String requestUrl = webRequest.getDescription(false);
         ErrorResponse response = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(), e.getMessage(), requestUrl, List.of(error));
+                HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage(), requestUrl, List.of(error));
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
@@ -49,7 +50,16 @@ public class ErrorHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    @ExceptionHandler(value = {ResourceNotFoundException.class})
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> businessError(BusinessException e) {
+        ErrorMessage error = new ErrorMessage(e.getMessage());
+        String requestUrl = webRequest.getDescription(false);
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(), e.getMessage(), requestUrl, List.of(error));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> resourceNotFound(ResourceNotFoundException e) {
         ErrorMessage error = new ErrorMessage(e.getMessage());
         String requestUrl = webRequest.getDescription(false);
