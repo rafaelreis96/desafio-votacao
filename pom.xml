@@ -79,7 +79,6 @@
 			<groupId>com.github.javafaker</groupId>
 			<artifactId>javafaker</artifactId>
 			<version>${javafaker.version}</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
