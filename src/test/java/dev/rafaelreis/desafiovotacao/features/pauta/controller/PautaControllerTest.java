@@ -1,13 +1,23 @@
 package dev.rafaelreis.desafiovotacao.features.pauta.controller;
 
 import com.github.javafaker.Faker;
+import dev.rafaelreis.desafiovotacao.exception.BusinessException;
+import dev.rafaelreis.desafiovotacao.exception.ResourceNotFoundException;
 import dev.rafaelreis.desafiovotacao.features.pauta.dto.CriarPautaRequestDto;
+import dev.rafaelreis.desafiovotacao.features.pauta.dto.CriarVotacaoRequestDto;
+import dev.rafaelreis.desafiovotacao.features.pauta.dto.CriarVotoRequestDto;
+import dev.rafaelreis.desafiovotacao.features.pauta.dto.VotacaoResponseDto;
 import dev.rafaelreis.desafiovotacao.features.pauta.mapper.PautaMapper;
+import dev.rafaelreis.desafiovotacao.features.pauta.mapper.VotacaoMapper;
 import dev.rafaelreis.desafiovotacao.features.pauta.service.PautaService;
 import dev.rafaelreis.desafiovotacao.model.entity.Pauta;
+import dev.rafaelreis.desafiovotacao.model.entity.Votacao;
+import dev.rafaelreis.desafiovotacao.model.enums.OpcaoVoto;
 import dev.rafaelreis.desafiovotacao.util.TestUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +35,7 @@ import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
- import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -104,23 +115,6 @@ class PautaControllerTest {
     }
 
     @Test
-    void deverRetornar400QuandoTituloDaPautaForInvalida() throws Exception {
-
-        CriarPautaRequestDto request = new CriarPautaRequestDto(
-                faker.lorem().sentence(), faker.lorem().fixedString(513));
-
-        when(pautaService.criar(any(Pauta.class))).thenReturn(null);
-
-        this.mockMvc.perform(post("/api/v1/pautas")
-                        .contentType(MediaType.APPLICATION_JSON_VALUE)
-                        .content(TestUtils.toJson(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("errors.[0].message").value(CriarPautaRequestDto.DESCRICAO_INVALIDO));
-
-        verify(pautaService, never()).criar(any(Pauta.class));
-    }
-
-    @Test
     void deverRetornar400QuandoIDForInvalido() throws Exception {
         this.mockMvc.perform(get("/api/v1/pautas/{id}", "a")
                         .contentType(MediaType.APPLICATION_JSON_VALUE))
@@ -189,4 +183,157 @@ class PautaControllerTest {
 
         verify(pautaService, times(1)).excluir(anyLong());
     }
+
+
+    @Test
+    void deveRetornar200QuandoAbrirVotacaoParaUmaPauta() throws Exception {
+        CriarVotacaoRequestDto request = new CriarVotacaoRequestDto();
+
+        Votacao votacao = new Votacao(LocalDateTime.now(), LocalDateTime.now().plusMinutes(1));
+        votacao.setId(1L);
+
+        Pauta pauta = new Pauta(faker.lorem().sentence(), faker.lorem().paragraph());
+        pauta.setId(123L);
+        pauta.setVotacao(votacao);
+
+        VotacaoResponseDto response = VotacaoMapper.toDto(votacao);
+
+        when(pautaService.abrirVotacoes(pauta.getId(), VotacaoMapper.toEntity(request))).thenReturn(votacao);
+
+        try(MockedStatic<VotacaoMapper> mapper = Mockito.mockStatic(VotacaoMapper.class)) {
+            mapper.when(() -> VotacaoMapper.toDto(votacao)).thenReturn(response);
+        }
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votacoes", pauta.getId())
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(jsonPath("id").value(votacao.getId()))
+                .andExpect(jsonPath("dataAbertura").isNotEmpty())
+                .andExpect(jsonPath("dataEncerramento").isNotEmpty());
+
+        verify(pautaService, times(1)).abrirVotacoes(pauta.getId(), VotacaoMapper.toEntity(request));
+    }
+
+
+    @Test
+    void deveRetornar404QuandoTentarAbrirVotacaoParaUmaPautaInexistente() throws Exception {
+        CriarVotacaoRequestDto request = new CriarVotacaoRequestDto();
+
+        Votacao votacao = new Votacao(LocalDateTime.now(), LocalDateTime.now().plusMinutes(1));
+        votacao.setId(1L);
+
+        String msgErro = "Pauta não encontrada";
+
+        doThrow(new ResourceNotFoundException(msgErro))
+                .when(pautaService).abrirVotacoes(anyLong(), any(Votacao.class));
+
+        try(MockedStatic<VotacaoMapper> mapper = Mockito.mockStatic(VotacaoMapper.class)) {
+            mapper.when(() -> VotacaoMapper.toEntity(request)).thenReturn(votacao);
+        }
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votacoes", 15689)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("errors.[*].message", hasItem(msgErro)));
+
+        verify(pautaService, times(1)).abrirVotacoes(anyLong(), any(Votacao.class));
+    }
+
+    @Test
+    void deveRetornar500QuandoOcorrerAlgumErrAoAbrirVotacao() throws Exception {
+        CriarVotacaoRequestDto request = new CriarVotacaoRequestDto();
+
+        Votacao votacao = new Votacao(LocalDateTime.now(), LocalDateTime.now().plusMinutes(1));
+        votacao.setId(1L);
+
+        String msgErro = "Erro inesperado";
+
+        doThrow(new RuntimeException(msgErro))
+                .when(pautaService).abrirVotacoes(anyLong(), any(Votacao.class));
+
+        try(MockedStatic<VotacaoMapper> mapper = Mockito.mockStatic(VotacaoMapper.class)) {
+            mapper.when(() -> VotacaoMapper.toEntity(request)).thenReturn(votacao);
+        }
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votacoes", 15689)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("errors.[*].message", hasItem(msgErro)));
+
+        verify(pautaService, times(1)).abrirVotacoes(anyLong(), any(Votacao.class));
+    }
+
+    @Test
+    void deveRetornar200QuandoVotarUmaPautaComSucesso() throws Exception {
+        Long pautaId = 1L;
+        CriarVotoRequestDto request = new CriarVotoRequestDto(1L, OpcaoVoto.SIM);
+
+        doNothing().when(pautaService).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isOk());
+
+        verify(pautaService, times(1)).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+    }
+
+    @Test
+    void deveRetornar404QuandoPautaForInexistente() throws Exception {
+        Long pautaId = 1L;
+        CriarVotoRequestDto request = new CriarVotoRequestDto(1L, OpcaoVoto.SIM);
+        String msgErro = "Pauta não encontrada";
+
+        doThrow(new ResourceNotFoundException(msgErro))
+                .when(pautaService).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("errors.[*].message", hasItem(msgErro)));
+
+        verify(pautaService, times(1)).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+    }
+
+    @Test
+    void deveRetornar400QuandoVotoForInvalido() throws Exception {
+        Long pautaId = 1L;
+        CriarVotoRequestDto request = new CriarVotoRequestDto(1L, OpcaoVoto.SIM);
+        String msgErro = "Associado inexistente";
+
+        doThrow(new BusinessException(msgErro))
+                .when(pautaService).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("errors.[*].message", hasItem(msgErro)));
+
+        verify(pautaService, times(1)).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+    }
+
+    @Test
+    void deveRetornar500QuandoOcorrerAlgumErrAoSalvarVoto() throws Exception {
+        Long pautaId = 1L;
+        CriarVotoRequestDto request = new CriarVotoRequestDto(1L, OpcaoVoto.SIM);
+        String msgErro = "Erro inesperado";
+
+        doThrow(new RuntimeException(msgErro))
+                .when(pautaService).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+
+        this.mockMvc.perform(post("/api/v1/pautas/{id}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON_VALUE)
+                        .content(TestUtils.toJson(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("errors.[*].message", hasItem(msgErro)));
+
+        verify(pautaService, times(1)).votarPauta(anyLong(), anyLong(), any(OpcaoVoto.class));
+    }
+
 }

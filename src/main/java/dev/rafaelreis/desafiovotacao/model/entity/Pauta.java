@@ -12,13 +12,19 @@ public class Pauta {
 
     public static final String SEQUENCE_NAME = "seq_pauta";
 
+    public static final String TABLE_ID = "cod_pauta";
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = SEQUENCE_NAME)
     @SequenceGenerator(name = SEQUENCE_NAME, sequenceName = SEQUENCE_NAME, allocationSize = 1)
-    @Column(name = "cod_pauta", nullable = false)
+    @Column(name = TABLE_ID, nullable = false)
     private Long id;
     private String titulo;
     private String descricao;
+
+    @OneToOne
+    @JoinColumn(name = Votacao.TABLE_ID)
+    private Votacao votacao;
 
     public Pauta() {}
 
@@ -51,12 +57,21 @@ public class Pauta {
         this.descricao = descricao;
     }
 
+    public Votacao getVotacao() {
+        return votacao;
+    }
+
+    public void setVotacao(Votacao votacao) {
+        this.votacao = votacao;
+    }
+
     @Override
     public String toString() {
         return "Pauta{" +
                 "id=" + id +
                 ", titulo='" + titulo + '\'' +
                 ", descricao='" + descricao + '\'' +
+                ", votacao=" + votacao +
                 '}';
     }
 

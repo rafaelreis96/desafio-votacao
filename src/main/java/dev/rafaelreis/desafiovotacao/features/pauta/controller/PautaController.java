@@ -1,11 +1,12 @@
 package dev.rafaelreis.desafiovotacao.features.pauta.controller;
 
 import dev.rafaelreis.desafiovotacao.exception.ResourceNotFoundException;
-import dev.rafaelreis.desafiovotacao.features.pauta.dto.CriarPautaRequestDto;
-import dev.rafaelreis.desafiovotacao.features.pauta.dto.PautaResponseDto;
+import dev.rafaelreis.desafiovotacao.features.pauta.dto.*;
 import dev.rafaelreis.desafiovotacao.features.pauta.mapper.PautaMapper;
+import dev.rafaelreis.desafiovotacao.features.pauta.mapper.VotacaoMapper;
 import dev.rafaelreis.desafiovotacao.features.pauta.service.PautaService;
 import dev.rafaelreis.desafiovotacao.model.entity.Pauta;
+import dev.rafaelreis.desafiovotacao.model.entity.Votacao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -74,6 +75,37 @@ public class PautaController {
     public ResponseEntity<Void> excluir(@Parameter(description = "ID da Pauta") @PathVariable("id") Long id) {
         pautaService.excluir(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Abre a votação de uma Pauta", description = "Este endpoint abre a votação de uma Pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Votação de pauta criada com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Pauta não encontrada."),
+            @ApiResponse(responseCode = "500", description = "Erro Interno.")
+    })
+    @PostMapping("/v1/pautas/{id}/votacoes")
+    public ResponseEntity<VotacaoResponseDto> abrirVotacoes(
+            @Parameter(description = "ID da Pauta")  @PathVariable("id") Long id,
+            @Parameter(description = "Votação") @Valid @RequestBody CriarVotacaoRequestDto request) {
+        Votacao votacao = pautaService.abrirVotacoes(id, VotacaoMapper.toEntity(request));
+        URI uri = ServletUriComponentsBuilder
+                .fromCurrentRequest().path("/{id}").buildAndExpand(votacao.getId()).toUri();
+        return ResponseEntity.created(uri).body(VotacaoMapper.toDto(votacao));
+    }
+
+    @Operation(summary = "Realiza o voto de uma Pauta", description = "Este endpoint realiza o voto em uma Pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Voto computado com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Pauta não encontrada."),
+            @ApiResponse(responseCode = "400", description = "Voto inválido."),
+            @ApiResponse(responseCode = "500", description = "Erro Interno.")
+    })
+    @PostMapping("/v1/pautas/{id}/votos")
+    public ResponseEntity<String> votar(
+            @Parameter(description = "ID da Pauta")  @PathVariable("id") Long id,
+            @Parameter(description = "Voto") @Valid @RequestBody CriarVotoRequestDto request) {
+        pautaService.votarPauta(id, request.getIdAssociado(), request.getOpcao());
+        return ResponseEntity.ok("Voto computado com sucesso.");
     }
 
 }
