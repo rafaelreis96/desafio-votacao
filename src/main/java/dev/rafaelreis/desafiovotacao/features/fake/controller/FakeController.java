@@ -6,6 +6,7 @@ import dev.rafaelreis.desafiovotacao.model.enums.OpcaoVoto;
 import dev.rafaelreis.desafiovotacao.model.enums.StatusVoto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Locale;
 
+@Tag(name = "Fake", description = "Gera dados fake")
 @RestController
 @RequestMapping("api")
 public class FakeController {
