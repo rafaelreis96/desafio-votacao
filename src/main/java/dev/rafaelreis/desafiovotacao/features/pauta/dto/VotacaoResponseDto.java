@@ -1,11 +1,13 @@
 package dev.rafaelreis.desafiovotacao.features.pauta.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class VotacaoResponseDto {
     private Long id;
     private LocalDateTime dataAbertura;
     private LocalDateTime dataEncerramento;
+    private List<VotoResponseDto> votos;
 
     public VotacaoResponseDto() {
 
@@ -41,12 +43,21 @@ public class VotacaoResponseDto {
         this.dataEncerramento = dataEncerramento;
     }
 
+    public List<VotoResponseDto> getVotos() {
+        return votos;
+    }
+
+    public void setVotos(List<VotoResponseDto> votos) {
+        this.votos = votos;
+    }
+
     @Override
     public String toString() {
         return "VotacaoResponseDto{" +
                 "id=" + id +
                 ", dataAbertura=" + dataAbertura +
                 ", dataEncerramento=" + dataEncerramento +
+                ", votos=" + votos +
                 '}';
     }
 }

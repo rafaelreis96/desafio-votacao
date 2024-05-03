@@ -5,6 +5,7 @@ public class PautaResponseDto {
     private Long id;
     private String titulo;
     private String descricao;
+    private VotacaoResponseDto votacao;
 
     public PautaResponseDto() {
 
@@ -40,12 +41,21 @@ public class PautaResponseDto {
         this.descricao = descricao;
     }
 
+    public VotacaoResponseDto getVotacao() {
+        return votacao;
+    }
+
+    public void setVotacao(VotacaoResponseDto votacao) {
+        this.votacao = votacao;
+    }
+
     @Override
     public String toString() {
         return "PautaResponseDto{" +
                 "id=" + id +
                 ", titulo='" + titulo + '\'' +
                 ", descricao='" + descricao + '\'' +
+                ", votacao=" + votacao +
                 '}';
     }
 }

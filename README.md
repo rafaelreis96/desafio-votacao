@@ -115,3 +115,50 @@ A tela do tipo SELECAO exibe uma lista de opções para que o usuário.
 O aplicativo envia uma requisição POST para a url informada e com o body definido pelo objeto dentro de cada item da lista de seleção, quando o mesmo é acionado, semelhando ao funcionamento dos botões da tela FORMULARIO.
 
 # desafio-votacao
+
+
+### Roar projeto
+
+Para rodar o projeto deve ter docker instalado
+
+Na raiz do projeto execute o comando ```./mvnw clean package```
+
+Depois ```docker compose up -d```
+
+Acesse a documentação da API ```http://localhost/swagger-ui/index.html```
+
+Para testar importe a api no postman ```http://localhost/api-docs```
+
+Pode gerar dados fakes em csv pelos endpoints ```/api/v1/fake/votos/:quantidade```
+
+Para usar dados fakes no postman:
+
+Criar Associado
+```
+{
+  "cpf": "11438143974",
+  "nome": "{{$randomFullName}}"
+}
+```
+
+Criar Pauta
+```
+{
+  "descricao": "{{$randomLoremSentences}}",
+  "titulo": "{{$randomLoremSentence}}"
+}
+```
+
+Abrir Votacao da Pauta
+```
+{
+  "dataEncerramento": "2024-05-05 17:00:00"
+}
+```
+Votar 
+```
+{
+  "idAssociado": "1",
+  "opcao": "SIM"
+}
+```

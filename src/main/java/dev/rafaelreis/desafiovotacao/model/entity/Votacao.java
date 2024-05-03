@@ -31,7 +31,7 @@ public class Votacao {
     private LocalDateTime dataEncerramento;
 
     @OneToMany(fetch = FetchType.LAZY)
-    @JoinColumn(name = Voto.TABLE_ID)
+    @JoinColumn(name = Votacao.TABLE_ID)
     private List<Voto> votos;
 
     public Votacao() {
