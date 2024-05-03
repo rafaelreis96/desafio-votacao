@@ -4,7 +4,7 @@ spring:
     name: desafio-votacao
   datasource:
     url:  ${DB_URL}
-    username: ${DB_USERNAME}
+    username: ${DB_USER}
     password: ${DB_PASSWORD}
     driverClassName: org.postgresql.Driver
   jpa:

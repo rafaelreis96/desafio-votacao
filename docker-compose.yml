@@ -11,7 +11,11 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
-
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "256MB"
   app:
     image: desafio-votacao
     restart: always
@@ -20,13 +24,19 @@ services:
       dockerfile: Dockerfile
     environment:
       DB_URL: jdbc:postgresql://db:5432/votacao
-      DB_USERNAME: postgres
+      DB_USER: postgres
       DB_PASSWORD: postgres
     ports:
       - "80:8080"
     depends_on:
       - db
     command: [ "java", "-jar", "app.jar" ]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512MB"
+
 
 
 networks:
