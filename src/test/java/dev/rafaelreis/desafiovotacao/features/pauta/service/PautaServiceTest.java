@@ -235,6 +235,7 @@ class PautaServiceTest {
     @Test
     void deveImpedirVotoELancarBusinessExceptionQuandoVotacaoEstiverEncerrada() {
         pauta.setVotacao(votacao);
+
         votacao.setDataEncerramento(votacao.getDataEncerramento().minusHours(1));
 
         when(pautaRepository.findById(anyLong())).thenReturn(Optional.of(pauta));
@@ -244,11 +245,28 @@ class PautaServiceTest {
         assertThrows(BusinessException.class, () -> pautaService.votarPauta(1L, 1L, OpcaoVoto.SIM));
 
         when(pautaRepository.findById(anyLong())).thenReturn(Optional.of(pauta));
-        verify(associadoService, times(1)).buscar(anyLong());
+        verify(associadoService, never()).buscar(anyLong());
+    }
+
+    @Test
+    void deveLancarBusinessExceptionQuandoTentarVotarPautaSemVotacao() {
+        pauta.setVotacao(null);
+
+        when(pautaRepository.findById(anyLong())).thenReturn(Optional.of(pauta));
+
+        when(associadoService.buscar(anyLong())).thenReturn(Optional.of(associado));
+
+        assertThrows(BusinessException.class, () -> pautaService.votarPauta(1L, 1L, OpcaoVoto.SIM));
+
+        verify(pautaRepository, times(1)).findById(anyLong());
+        verify(associadoService, never()).buscar(anyLong());
+        verify(votoRepository, never()).save(any(Voto.class));
     }
 
     @Test
     void deveLancarRuntimeExceptionQuandoOcorrerErroAoSalvarVoto() {
+        pauta.setVotacao(votacao);
+
         when(pautaRepository.findById(anyLong())).thenReturn(Optional.of(pauta));
 
         when(associadoService.buscar(anyLong())).thenReturn(Optional.of(associado));
@@ -259,7 +277,7 @@ class PautaServiceTest {
 
         verify(pautaRepository, times(1)).findById(anyLong());
         verify(associadoService, times(1)).buscar(anyLong());
-        verify(votoRepository, never()).save(any(Voto.class));
+        verify(votoRepository, times(1)).save(any(Voto.class));
     }
 
 }

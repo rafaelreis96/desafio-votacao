@@ -32,6 +32,8 @@ public class PautaService {
 
     public static final String MSG_VOTACAO_DA_PAUTA_ENCERRADA = "Votação da pauta encerrada.";
 
+    public static final String MSG_VOTACAO_DA_PAUTA_NAO_INICIADA = "Pauta ainda não possui uma sessão de votação.";
+
     public static final String MSG_ASSOCIADO_NAO_ENCONTRADO = "Associado não encontrado.";
 
     public static final String PAUTA_NAO_ENCONTRADA = "Pauta não encontrada.";
@@ -139,12 +141,16 @@ public class PautaService {
         final Pauta pauta = this.obterPautaEmVotacao(idPauta)
                 .orElseThrow(() -> new ResourceNotFoundException(PAUTA_NAO_ENCONTRADA));
 
-        final Associado associado = this.associadoService.buscar(idAssociado)
-                .orElseThrow(() -> new ResourceNotFoundException(MSG_ASSOCIADO_NAO_ENCONTRADO));
+        if(Objects.isNull(pauta.getVotacao())) {
+            throw new BusinessException(MSG_VOTACAO_DA_PAUTA_NAO_INICIADA);
+        }
 
         if(pauta.getVotacao().getDataEncerramento().isBefore(LocalDateTime.now())) {
             throw new BusinessException(MSG_VOTACAO_DA_PAUTA_ENCERRADA);
         }
+
+        final Associado associado = this.associadoService.buscar(idAssociado)
+                .orElseThrow(() -> new ResourceNotFoundException(MSG_ASSOCIADO_NAO_ENCONTRADO));
 
         if(votoRepository.existsByAssociadoIdAndVotacaoId(associado.getId(), pauta.getVotacao().getId())) {
             throw new BusinessException(MSG_VOTO_JA_REGISTRADO_PARA_ESTA_PAUTA);
