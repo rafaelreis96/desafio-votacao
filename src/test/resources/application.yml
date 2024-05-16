@@ -10,3 +10,18 @@ spring:
       ddl-auto: update
   flyway:
     enabled: false
+
+rabbitmq:
+  host: localhost
+  port: 5672
+  username: guest
+  password: guest
+
+queue:
+  name: fl-votos
+
+logging:
+  path: ./logs
+  level:
+    root: info
+    dev.rafaelreis.desafiovotacao: debug

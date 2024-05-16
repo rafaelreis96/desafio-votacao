@@ -16,6 +16,21 @@ services:
         limits:
           cpus: "0.5"
           memory: "256MB"
+
+  rabbitmq:
+    image: rabbitmq:3.13.2-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "252MB"
+
   app:
     image: desafio-votacao
     restart: always
@@ -26,18 +41,19 @@ services:
       DB_URL: jdbc:postgresql://db:5432/votacao
       DB_USER: postgres
       DB_PASSWORD: postgres
+      MQ_USER: guest
+      MQ_PASSWORD: guest
     ports:
       - "80:8080"
     depends_on:
       - db
+      - rabbitmq
     command: [ "java", "-jar", "app.jar" ]
     deploy:
       resources:
         limits:
           cpus: "0.5"
           memory: "512MB"
-
-
 
 networks:
   default:
