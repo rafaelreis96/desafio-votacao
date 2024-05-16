@@ -3,6 +3,8 @@ package dev.rafaelreis.desafiovotacao.features.pauta.service;
 import dev.rafaelreis.desafiovotacao.exception.BusinessException;
 import dev.rafaelreis.desafiovotacao.exception.ResourceNotFoundException;
 import dev.rafaelreis.desafiovotacao.features.associado.service.AssociadoService;
+import dev.rafaelreis.desafiovotacao.features.pauta.dto.VotoDto;
+import dev.rafaelreis.desafiovotacao.features.pauta.mq.VotacaoProducer;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.PautaRepostitory;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.VotacaoRepostitory;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.VotoRepository;
@@ -28,6 +30,8 @@ public class PautaService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PautaService.class);
 
+    public static final String MSG_DATA_DE_ABERTURA_DEVE_SER_ANTERIOR_A_DATA_DE_ENCERRAMENTO = "Data de abertura deve ser anterior a data de encerramento.";
+
     public static final String MSG_VOTO_JA_REGISTRADO_PARA_ESTA_PAUTA = "Voto já registrado para esta pauta.";
 
     public static final String MSG_VOTACAO_DA_PAUTA_ENCERRADA = "Votação da pauta encerrada.";
@@ -42,6 +46,8 @@ public class PautaService {
 
     public static final String MSG_OCORREU_UM_ERRO_AO_ABRIR_A_VOTACAO = "Ocorreu um erro ao abrir a votação.";
 
+    public static final String MSG_PAUTA_JA_POSSUI_UMA_SESSAO_DE_VOTACAO = "Pauta já possui uma sessão de votação.";
+
     private final PautaRepostitory pautaRepostitory;
 
     private final VotacaoRepostitory votacaoRepostitory;
@@ -50,14 +56,18 @@ public class PautaService {
 
     private final AssociadoService associadoService;
 
+    private final VotacaoProducer votoProdutor;
+
     public PautaService(PautaRepostitory pautaRepostitory,
                         VotacaoRepostitory votacaoRepostitory,
                         VotoRepository votoRepository,
-                        AssociadoService associadoService) {
+                        AssociadoService associadoService,
+                        VotacaoProducer votoProdutor) {
         this.pautaRepostitory = pautaRepostitory;
         this.votacaoRepostitory = votacaoRepostitory;
         this.votoRepository = votoRepository;
         this.associadoService = associadoService;
+        this.votoProdutor = votoProdutor;
     }
 
     @Transactional(Transactional.TxType.REQUIRED)
@@ -101,7 +111,7 @@ public class PautaService {
                 .orElseThrow(() -> new ResourceNotFoundException(PAUTA_NAO_ENCONTRADA));
 
         if(Objects.nonNull(pauta.getVotacao())) {
-            throw new BusinessException("Pauta já possui uma sessão de votação.");
+            throw new BusinessException(MSG_PAUTA_JA_POSSUI_UMA_SESSAO_DE_VOTACAO);
         }
 
         votacao.setDataAbertura(LocalDateTime.now());
@@ -111,8 +121,9 @@ public class PautaService {
             votacao.setDataEncerramento(votacao.getDataAbertura().plusMinutes(1));
         }
 
+
         if(votacao.getDataAbertura().isAfter(votacao.getDataEncerramento())) {
-            throw new BusinessException("Data de abertura deve ser anterior a data de encerramento.");
+            throw new BusinessException(MSG_DATA_DE_ABERTURA_DEVE_SER_ANTERIOR_A_DATA_DE_ENCERRAMENTO);
         }
 
         try {
@@ -136,9 +147,37 @@ public class PautaService {
      * @param  opcao        A opção de voto
      * @throws RuntimeException  Se ocorrer um erro ao salvar a sessão de votação
      */
-    @Transactional(Transactional.TxType.REQUIRED)
     public void votarPauta(Long idPauta, Long idAssociado, OpcaoVoto opcao) {
-        final Pauta pauta = this.obterPautaEmVotacao(idPauta)
+        final VotoDto votoDto = new VotoDto(idPauta, idAssociado, opcao, LocalDateTime.now());
+        this.computarVoto(votoDto);
+    }
+
+    /**
+     * Efetua o voto para uma determinada sessão de votação de forma assíncrona.
+     *
+     * @param  idPauta      O ID da pauta
+     * @param  idAssociado  O ID do associado
+     * @param  opcao        A opção de voto
+     * @throws RuntimeException  Se ocorrer um erro ao salvar a sessão de votação
+     */
+    public void votarPautaAsync(Long idPauta, Long idAssociado, OpcaoVoto opcao) {
+        final VotoDto votoDto = new VotoDto(idPauta, idAssociado, opcao, LocalDateTime.now());
+        this.votoProdutor.enviar(votoDto);
+    }
+
+    /**
+     * Computa o voto para uma determinada sessão de votação.
+     *
+     * @param  votoDto  o objeto de transferência de dados do voto contendo o ID da sessão de votação,
+     *                  o ID do associado, a opção de voto e a data de registro
+     * @throws ResourceNotFoundException    se a sessão de votação ou o associado não for encontrado
+     * @throws BusinessException            se a sessão de votação para a pauta não tiver iniciado ou se já tiver
+     *                                      encerrado, ou se o voto já tiver sido registrado para esta pauta
+     * @throws RuntimeException             se ocorrer um erro ao registrar o voto
+     */
+    @Transactional(Transactional.TxType.REQUIRED)
+    public void computarVoto(VotoDto votoDto) {
+        final Pauta pauta = this.obterPautaEmVotacao(votoDto.getIdPauta())
                 .orElseThrow(() -> new ResourceNotFoundException(PAUTA_NAO_ENCONTRADA));
 
         if(Objects.isNull(pauta.getVotacao())) {
@@ -149,14 +188,14 @@ public class PautaService {
             throw new BusinessException(MSG_VOTACAO_DA_PAUTA_ENCERRADA);
         }
 
-        final Associado associado = this.associadoService.buscar(idAssociado)
+        final Associado associado = this.associadoService.buscar(votoDto.getIdAssociado())
                 .orElseThrow(() -> new ResourceNotFoundException(MSG_ASSOCIADO_NAO_ENCONTRADO));
 
         if(votoRepository.existsByAssociadoIdAndVotacaoId(associado.getId(), pauta.getVotacao().getId())) {
             throw new BusinessException(MSG_VOTO_JA_REGISTRADO_PARA_ESTA_PAUTA);
         }
 
-        final Voto voto = new Voto(pauta.getVotacao(), associado, opcao);
+        final Voto voto = new Voto(pauta.getVotacao(), associado, votoDto.getOpcao(), votoDto.getDataRegistro());
 
         try {
             this.votoRepository.save(voto);
@@ -165,6 +204,5 @@ public class PautaService {
             throw new RuntimeException(MSG_OCORREU_UM_ERRO_A_REGISTRAR_O_VOTO);
         }
     }
-
 
 }

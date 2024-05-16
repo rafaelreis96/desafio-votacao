@@ -110,4 +110,19 @@ public class PautaController {
         return ResponseEntity.ok("Voto computado com sucesso.");
     }
 
+    @Operation(summary = "Realiza o voto de uma Pauta de modo assíncrono", description = "Este endpoint realiza o voto em uma Pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Voto computado com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Pauta não encontrada."),
+            @ApiResponse(responseCode = "400", description = "Voto inválido."),
+            @ApiResponse(responseCode = "500", description = "Erro Interno.")
+    })
+    @PostMapping("/v2/pautas/{id}/votos")
+    public ResponseEntity<Void> votarAsync(
+            @Parameter(description = "ID da Pauta")  @PathVariable("id") Long id,
+            @Parameter(description = "Voto") @Valid @RequestBody CriarVotoRequestDto request) {
+        pautaService.votarPautaAsync(id, request.getIdAssociado(), request.getOpcao());
+        return ResponseEntity.ok().build();
+    }
+
 }

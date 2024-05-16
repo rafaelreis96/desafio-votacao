@@ -4,6 +4,7 @@ import com.github.javafaker.Faker;
 import dev.rafaelreis.desafiovotacao.exception.BusinessException;
 import dev.rafaelreis.desafiovotacao.exception.ResourceNotFoundException;
 import dev.rafaelreis.desafiovotacao.features.associado.service.AssociadoService;
+import dev.rafaelreis.desafiovotacao.features.pauta.mq.VotacaoProducer;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.PautaRepostitory;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.VotacaoRepostitory;
 import dev.rafaelreis.desafiovotacao.features.pauta.repository.VotoRepository;
@@ -22,6 +23,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +35,7 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties="queue.voto=fl-voto")
 class PautaServiceTest {
 
     @Mock
@@ -48,6 +52,9 @@ class PautaServiceTest {
 
     @Mock
     private AssociadoService associadoService;
+
+    @MockBean
+    private VotacaoProducer votacaoProducer;
 
     private static Faker faker;
 
@@ -76,7 +83,7 @@ class PautaServiceTest {
         votacao = new Votacao(dataAbertura, dataAbertura.plusMinutes(1));
         votacao.setId(faker.random().nextLong());
 
-        voto = new Voto(votacao, associado, OpcaoVoto.SIM);
+        voto = new Voto(votacao, associado, OpcaoVoto.SIM, LocalDateTime.now());
         voto.setId(faker.random().nextLong());
     }
 

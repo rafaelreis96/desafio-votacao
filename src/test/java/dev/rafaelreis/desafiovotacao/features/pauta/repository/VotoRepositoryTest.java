@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 
@@ -17,10 +18,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
+@TestPropertySource(properties="queue.voto=fl-voto")
 class VotoRepositoryTest {
 
     @MockBean
     private VotoRepository votoRepository;
+
 
     private static Faker faker;
 

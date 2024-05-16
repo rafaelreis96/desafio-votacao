@@ -3,6 +3,7 @@ package dev.rafaelreis.desafiovotacao.model.entity;
 import dev.rafaelreis.desafiovotacao.model.enums.OpcaoVoto;
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -33,13 +34,18 @@ public class Voto {
     @Column(name = "opcao", length = 30, nullable = false)
     private OpcaoVoto opcao;
 
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "data_registro", nullable = false)
+    private LocalDateTime dataRegistro;
+
     public Voto() {
     }
 
-    public Voto(Votacao votacao, Associado associado, OpcaoVoto opcao) {
+    public Voto(Votacao votacao, Associado associado, OpcaoVoto opcao, LocalDateTime dataRegistro) {
         this.votacao = votacao;
         this.associado = associado;
         this.opcao = opcao;
+        this.dataRegistro = dataRegistro;
     }
 
     public Long getId() {
@@ -74,6 +80,14 @@ public class Voto {
         this.opcao = opcao;
     }
 
+    public LocalDateTime getDataRegistro() {
+        return dataRegistro;
+    }
+
+    public void setDataRegistro(LocalDateTime dataRegistro) {
+        this.dataRegistro = dataRegistro;
+    }
+
     @Override
     public String toString() {
         return "Voto{" +
@@ -81,6 +95,7 @@ public class Voto {
                 ", votacao=" + votacao +
                 ", associado=" + associado +
                 ", opcao=" + opcao +
+                ", dataRegistro=" + dataRegistro +
                 '}';
     }
 
