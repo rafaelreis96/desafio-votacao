@@ -14,6 +14,7 @@ import dev.rafaelreis.desafiovotacao.model.entity.Votacao;
 import dev.rafaelreis.desafiovotacao.model.entity.Voto;
 import dev.rafaelreis.desafiovotacao.model.enums.OpcaoVoto;
 import jakarta.transaction.Transactional;
+import org.hibernate.boot.beanvalidation.IntegrationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
@@ -131,7 +132,7 @@ public class PautaService {
             this.pautaRepostitory.save(pauta);
         } catch (RuntimeException e) {
             LOGGER.error("Ocorreu um erro ao abrir votação: {}, Erro: {}", votacao, e.getMessage());
-            throw new RuntimeException(MSG_OCORREU_UM_ERRO_AO_ABRIR_A_VOTACAO);
+            throw new IntegrationException(MSG_OCORREU_UM_ERRO_AO_ABRIR_A_VOTACAO);
         }
 
         LOGGER.debug("Votação de pauta aberta com sucesso: {}", votacao);
@@ -201,7 +202,7 @@ public class PautaService {
             this.votoRepository.save(voto);
         } catch (RuntimeException e) {
             LOGGER.error("Ocorreu um erro ao registrar o voto: {}, Erro: {}", voto, e.getMessage());
-            throw new RuntimeException(MSG_OCORREU_UM_ERRO_A_REGISTRAR_O_VOTO);
+            throw new IntegrationException(MSG_OCORREU_UM_ERRO_A_REGISTRAR_O_VOTO);
         }
     }
 
